@@ -10,7 +10,10 @@ const fs = require("fs");
 const util = require("util");
 const bodyParser = require("body-parser");
 
+
 dotenv.config();
+
+const base64Key = process.env.GTTS;
 
 // Cloudinary configuration
 cloudinary.config({
@@ -23,10 +26,18 @@ app.use(cors());
 
 app.use(bodyParser.json());
 
-// Google Cloud TTS client
+
+const keyFilePath = "./gcloud-key.json";
+if (base64Key) {
+  const buffer = Buffer.from(base64Key, "base64");
+  fs.writeFileSync(keyFilePath, buffer);
+}
+
 const client = new textToSpeech.TextToSpeechClient({
-  keyFilename: "./sinuous-aviary-443600-t7-fd1cef1d9710.json", // Replace with your JSON key file path
+  keyFilename:keyFilePath
 });
+
+console.log(client);
 
 app.post("/synthesize", async (req, res) => {
   const { text } = req.body;
@@ -50,33 +61,14 @@ app.post("/synthesize", async (req, res) => {
       "Content-Length": response.audioContent.length,
     });
 
+    const writeFile = util.promisify(fs.writeFile);
+    await writeFile("./audios/output.mp3", response.audioContent, "binary");
+
     res.send(response.audioContent); // Send MP3 content directly to frontend
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
-
-// app.post("/synthesize", async (req, res) => {
-//   const { text } = req.body;
-
-//   if (!text) {
-//     return res.status(400).send("Text is required");
-//   }
-
-//   const request = {
-//     input: { text },
-//     voice: { languageCode: "en-US", ssmlGender: "NEUTRAL" },
-//     audioConfig: { audioEncoding: "MP3" },
-//   };
-
-//   try {
-//     const [response] = await client.synthesizeSpeech(request);
-//     res.set("Content-Type", "audio/mpeg");
-//     res.send(response.audioContent); // Send MP3 content directly to the frontend
-//   } catch (error) {
-//     res.status(500).send(error.message);
-//   }
-// });
 
 app.post("/upload", upload.single("image"), async (req, res) => {
   try {
