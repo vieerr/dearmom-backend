@@ -10,7 +10,6 @@ const fs = require("fs");
 const util = require("util");
 const bodyParser = require("body-parser");
 
-
 dotenv.config();
 
 const base64Key = process.env.GTTS;
@@ -26,7 +25,6 @@ app.use(cors());
 
 app.use(bodyParser.json());
 
-
 const keyFilePath = "./gcloud-key.json";
 if (base64Key) {
   const buffer = Buffer.from(base64Key, "base64");
@@ -34,14 +32,12 @@ if (base64Key) {
 }
 
 const client = new textToSpeech.TextToSpeechClient({
-  keyFilename:keyFilePath
+  keyFilename: keyFilePath,
 });
-
-console.log(client);
 
 app.post("/synthesize", async (req, res) => {
   const { text } = req.body;
-
+  console.log(req.body);
   if (!text) {
     return res.status(400).send("Text is required");
   }
@@ -61,8 +57,9 @@ app.post("/synthesize", async (req, res) => {
       "Content-Length": response.audioContent.length,
     });
 
-    const writeFile = util.promisify(fs.writeFile);
-    await writeFile("./audios/output.mp3", response.audioContent, "binary");
+    // Save audio content to local
+    // const writeFile = util.promisify(fs.writeFile);
+    // await writeFile("./audios/output.mp3", response.audioContent, "binary");
 
     res.send(response.audioContent); // Send MP3 content directly to frontend
   } catch (error) {
@@ -72,7 +69,6 @@ app.post("/synthesize", async (req, res) => {
 
 app.post("/upload", upload.single("image"), async (req, res) => {
   try {
-    console.log(req.body);
     const result = await cloudinary.uploader.upload(req.body.image, {
       folder: "folder_name",
     });
