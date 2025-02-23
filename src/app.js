@@ -105,7 +105,10 @@ app.post("/register", async (req, res) => {
     });
     const newUser = await user.save();
 
-    const token = jwt.sign({ userId: newUser._id }, process.env.SECRET_KEY);
+    const token = jwt.sign(
+      { userId: newUser._id, contacts: [] },
+      process.env.SECRET_KEY,
+    );
 
     res.status(201).json({ token });
   } catch (error) {
@@ -114,6 +117,7 @@ app.post("/register", async (req, res) => {
 });
 
 app.get("/me", async (req, res) => {
+  let newToken;
   try {
     const token = req.header("Authorization")?.split(" ")[1];
     if (!token) return res.sendStatus(403);
@@ -123,8 +127,11 @@ app.get("/me", async (req, res) => {
 
       const foundUser = await User.findById(user.userId);
       if (!user) return res.sendStatus(403);
+      newToken = jwt.sign(
+        { userId: foundUser._id, contacts: [user.contacts] },
+        process.env.SECRET_KEY,
+      );
     });
-    const newToken = jwt.sign({ userId: user.userId }, process.env.SECRET_KEY);
     res.status(200).json({ token: newToken });
   } catch (error) {
     console.error({ error });
@@ -140,7 +147,10 @@ app.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY);
+    const token = jwt.sign(
+      { userId: user._id, contacts: user.contacts },
+      process.env.SECRET_KEY,
+    );
     res.status(200).json({ token });
   } catch (error) {
     res.status(500).json({ error: "Server login error" });
