@@ -14,7 +14,6 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
 const User = require("./user.model.js");
-const { log } = require("console");
 
 dotenv.config();
 
@@ -41,8 +40,10 @@ app.use(bodyParser.json());
 
 const keyFilePath = "./gcloud-key.json";
 if (base64Key) {
-  const buffer = Buffer.from(base64Key, "base64");
-  fs.writeFileSync(keyFilePath, buffer);
+  if (!fs.existsSync(keyFilePath)) {
+    const buffer = Buffer.from(base64Key, "base64");
+    fs.writeFileSync(keyFilePath, buffer);
+  }
 }
 
 const client = new textToSpeech.TextToSpeechClient({
