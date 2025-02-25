@@ -12,7 +12,7 @@ const util = require("util");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-
+const userRouter = require("./user.controller.js");
 const User = require("./user.model.js");
 
 dotenv.config();
@@ -94,117 +94,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
   }
 });
 
-app.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
-
-  try {
-    const hashedPwd = await bcrypt.hash(password, 10);
-    const user = new User({
-      name,
-      email,
-      password: hashedPwd,
-      contacts: [
-        { name: "mom", phone: "", color: "#red", icon: "woman" },
-        {
-          name: "dad",
-          phone: "",
-          color: "#blue",
-          icon: "man",
-        },
-      ],
-    });
-    const newUser = await user.save();
-
-    const token = jwt.sign(
-      { userId: newUser._id, contacts: [] },
-      process.env.SECRET_KEY,
-    );
-
-    res.status(201).json({ token });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get("/me", async (req, res) => {
-  try {
-    const token = req.header("Authorization")?.split(" ")[1];
-    if (!token) return res.sendStatus(403);
-
-    // Verify token using promise-based approach
-    const user = await new Promise((resolve, reject) => {
-      jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
-        if (err) reject(err);
-        else resolve(decoded);
-      });
-    });
-
-    // Find user in database
-    const foundUser = await User.findById(user.userId);
-    if (!foundUser) return res.sendStatus(403);
-
-    // Create new token with updated data
-    const newToken = jwt.sign(
-      {
-        userId: foundUser._id,
-        // Use foundUser.contacts instead of user.contacts if that's what you intended
-        contacts: foundUser.contacts,
-      },
-      process.env.SECRET_KEY,
-    );
-
-    res.status(200).json({ token: newToken });
-  } catch (error) {
-    console.error({ error });
-    if (
-      error.name === "TokenExpiredError" ||
-      error.name === "JsonWebTokenError"
-    ) {
-      return res.sendStatus(403);
-    }
-    res.sendStatus(500);
-  }
-});
-
-app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
-
-    const token = jwt.sign(
-      { userId: user._id, contacts: user.contacts },
-      process.env.SECRET_KEY,
-    );
-    res.status(200).json({ token });
-  } catch (error) {
-    res.status(500).json({ error: "Server login error" });
-  }
-});
-
-app.patch("/add-contact", async (req, res) => {
-  try {
-    const userId = req.body._id;
-    const found = await User.findOne({
-      _id: new mongoose.Types.ObjectId(`${userId}`),
-    });
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: userId },
-      {
-        $push: {
-          contacts: req.body.contact,
-        },
-      },
-      { new: true },
-    );
-    res.status(200).json(updatedUser);
-  } catch (error) {
-    console.error({ error });
-  }
-});
+app.use("", userRouter);
 
 // const authenticateJWT = (req, res, next) => {
 //     const token = req.header('Authorization')?.split(' ')[1];
