@@ -103,6 +103,15 @@ app.post("/register", async (req, res) => {
       name,
       email,
       password: hashedPwd,
+      contacts: [
+        { name: "mom", phone: "", color: "#red", icon: "woman" },
+        {
+          name: "dad",
+          phone: "",
+          color: "#blue",
+          icon: "man",
+        },
+      ],
     });
     const newUser = await user.save();
 
@@ -118,24 +127,42 @@ app.post("/register", async (req, res) => {
 });
 
 app.get("/me", async (req, res) => {
-  let newToken;
   try {
     const token = req.header("Authorization")?.split(" ")[1];
     if (!token) return res.sendStatus(403);
 
-    jwt.verify(token, process.env.SECRET_KEY, async (err, user) => {
-      if (err) return res.sendStatus(403);
-
-      const foundUser = await User.findById(user.userId);
-      if (!user) return res.sendStatus(403);
-      newToken = jwt.sign(
-        { userId: foundUser._id, contacts: [user.contacts] },
-        process.env.SECRET_KEY,
-      );
+    // Verify token using promise-based approach
+    const user = await new Promise((resolve, reject) => {
+      jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+        if (err) reject(err);
+        else resolve(decoded);
+      });
     });
+
+    // Find user in database
+    const foundUser = await User.findById(user.userId);
+    if (!foundUser) return res.sendStatus(403);
+
+    // Create new token with updated data
+    const newToken = jwt.sign(
+      {
+        userId: foundUser._id,
+        // Use foundUser.contacts instead of user.contacts if that's what you intended
+        contacts: foundUser.contacts,
+      },
+      process.env.SECRET_KEY,
+    );
+
     res.status(200).json({ token: newToken });
   } catch (error) {
     console.error({ error });
+    if (
+      error.name === "TokenExpiredError" ||
+      error.name === "JsonWebTokenError"
+    ) {
+      return res.sendStatus(403);
+    }
+    res.sendStatus(500);
   }
 });
 
