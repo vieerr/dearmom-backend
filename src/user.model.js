@@ -19,6 +19,12 @@ const userSchema = new mongoose.Schema({
     min: 6,
     max: 1024,
   },
+  pin: {
+    type: String,
+    required: true,
+    min: 4,
+    max: 4,
+  },
   contacts: {
     type: Array,
     required: false,

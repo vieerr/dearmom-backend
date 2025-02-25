@@ -12,7 +12,7 @@ dotenv.config();
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, pin } = req.body;
 
   try {
     const hashedPwd = await bcrypt.hash(password, 10);
@@ -20,9 +20,17 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password: hashedPwd,
+      pin,
       contacts: [
-        { name: "mom", email: "", color: "#red", icon: "woman" },
         {
+          id: uuid(),
+          name: "mom",
+          email: "",
+          color: "#red",
+          icon: "woman",
+        },
+        {
+          id: uuid(),
           name: "dad",
           email: "",
           color: "#blue",
@@ -33,7 +41,7 @@ router.post("/register", async (req, res) => {
     const newUser = await user.save();
 
     const token = jwt.sign(
-      { userId: newUser._id, contacts: [] },
+      { userId: newUser._id, contacts: [], pin },
       process.env.SECRET_KEY,
     );
 
@@ -48,7 +56,6 @@ router.get("/me", async (req, res) => {
     const token = req.header("Authorization")?.split(" ")[1];
     if (!token) return res.sendStatus(403);
 
-    // Verify token using promise-based routerroach
     const user = await new Promise((resolve, reject) => {
       jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
         if (err) reject(err);
@@ -56,16 +63,14 @@ router.get("/me", async (req, res) => {
       });
     });
 
-    // Find user in database
     const foundUser = await User.findById(user.userId);
     if (!foundUser) return res.sendStatus(403);
 
-    // Create new token with updated data
     const newToken = jwt.sign(
       {
         userId: foundUser._id,
-        // Use foundUser.contacts instead of user.contacts if that's what you intended
         contacts: foundUser.contacts,
+        pin: foundUser.pin,
       },
       process.env.SECRET_KEY,
     );
@@ -93,7 +98,7 @@ router.post("/login", async (req, res) => {
     if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
     const token = jwt.sign(
-      { userId: user._id, contacts: user.contacts },
+      { userId: user._id, contacts: user.contacts, pin: user.pin },
       process.env.SECRET_KEY,
     );
     res.status(200).json({ token });
@@ -194,7 +199,7 @@ const transporter = nodemailer.createTransport({
 
 // Route to send email with embedded image
 router.post("/send-email", async (req, res) => {
-  const { recipientEmail, imageUrl } = req.body;
+  const { recipientEmail, imageUrl, name } = req.body;
 
   if (!recipientEmail || !imageUrl) {
     return res
@@ -213,11 +218,11 @@ router.post("/send-email", async (req, res) => {
     const mailOptions = {
       from: process.env.GMAIL_USER, // Sender address
       to: recipientEmail, // Recipient address
-      subject: "A Letter from Your Child", // Subject line
+      subject: `Dear ${name}, a new letter just arrived!`, // Subject line
       html: `
-        <p>Here's a letter from your child:</p>
+        <p>Here's a letter for you:</p>
         <img src="cid:unique-image-id" alt="Letter" style="width: 400px; height: auto;" />
-        <a href="https://dearmom.vercel.app" target="_blank" rel="noopener noreferrer">Dear Mom</a>!
+        <a href="https://dearmom.vercel.app" target="_blank" rel="noopener noreferrer">Powered by Dear Mom</a>!
       `, // HTML body with embedded image
       attachments: [
         {
