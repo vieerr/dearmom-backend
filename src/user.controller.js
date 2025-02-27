@@ -26,14 +26,14 @@ router.post("/register", async (req, res) => {
           id: uuid(),
           name: "mom",
           email: "",
-          color: "red",
+          color: "#f472b6",
           icon: "woman",
         },
         {
           id: uuid(),
           name: "dad",
           email: "",
-          color: "blue",
+          color: "#60a5fa",
           icon: "man",
         },
       ],
@@ -42,12 +42,12 @@ router.post("/register", async (req, res) => {
 
     const token = jwt.sign(
       { userId: newUser._id, contacts: [], pin },
-      process.env.SECRET_KEY,
+      process.env.SECRET_KEY
     );
 
     res.status(201).json({ token });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).send({ message: error.message });
   }
 });
 
@@ -64,6 +64,8 @@ router.get("/me", async (req, res) => {
     });
 
     const foundUser = await User.findById(user.userId);
+    console.log(foundUser);
+
     if (!foundUser) return res.sendStatus(403);
 
     const newToken = jwt.sign(
@@ -72,7 +74,7 @@ router.get("/me", async (req, res) => {
         contacts: foundUser.contacts,
         pin: foundUser.pin,
       },
-      process.env.SECRET_KEY,
+      process.env.SECRET_KEY
     );
 
     res.status(200).json({ token: newToken });
@@ -92,18 +94,18 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+    if (!user) return res.status(401).send({ message: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
+    if (!isMatch) return res.status(401).send({ message: "Invalid credentials" });
 
     const token = jwt.sign(
       { userId: user._id, contacts: user.contacts, pin: user.pin },
-      process.env.SECRET_KEY,
+      process.env.SECRET_KEY
     );
     res.status(200).json({ token });
   } catch (error) {
-    res.status(500).json({ error: "Server login error" });
+    res.status(500).send({ error: "Server login error" });
   }
 });
 
@@ -120,7 +122,7 @@ router.patch("/add-contact", async (req, res) => {
           contacts: { ...req.body.contact, id: uuid() },
         },
       },
-      { new: true },
+      { new: true }
     );
     res.status(200).json(updatedUser);
   } catch (error) {
@@ -138,19 +140,17 @@ router.delete("/delete-contact", async (req, res) => {
         .status(400)
         .json({ error: "userId and contactId are required" });
     }
-
     // Find the user and remove the contact by name
     const updatedUser = await User.findOneAndUpdate(
       { _id: new mongoose.Types.ObjectId(`${userId}`) },
       { $pull: { contacts: { id: contactId } } },
-      { new: true },
+      { new: true }
     );
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    res.status(200).json(updatedUser);
+    res.status(202).json(updatedUser.contacts);
   } catch (error) {
     console.error({ error });
     res.status(500).json({ error: "Server error while deleting contact" });
@@ -174,7 +174,7 @@ router.put("/update-contact", async (req, res) => {
         "contacts.id": contactId,
       },
       { $set: { "contacts.$": updatedContact } },
-      { new: true },
+      { new: true }
     );
 
     if (!updatedUser) {
