@@ -50,6 +50,10 @@ const client = new textToSpeech.TextToSpeechClient({
   keyFilename: keyFilePath,
 });
 
+app.get("/", async (req, res) => {
+  req.send("Dearmom backend");
+});
+
 app.post("/synthesize", async (req, res) => {
   const { text } = req.body;
   if (!text) {
