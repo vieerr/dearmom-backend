@@ -38,16 +38,12 @@ app.use(cors());
 
 app.use(bodyParser.json());
 
-const keyFilePath = "./gcloud-key.json";
-if (base64Key) {
-  if (!fs.existsSync(keyFilePath)) {
-    const buffer = Buffer.from(base64Key, "base64");
-    fs.writeFileSync(keyFilePath, buffer);
-  }
+let credentials;
+if (process.env.GOOGLE_CREDENTIALS_JSON) {
+  credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
 }
-
 const client = new textToSpeech.TextToSpeechClient({
-  keyFilename: keyFilePath,
+  credentials,
 });
 
 app.get("/", async (req, res) => {
@@ -76,8 +72,8 @@ app.post("/synthesize", async (req, res) => {
     });
 
     // Save audio content to local
-    const writeFile = util.promisify(fs.writeFile);
-    await writeFile("./audios/output.mp3", response.audioContent, "binary");
+    // const writeFile = util.promisify(fs.writeFile);
+    // await writeFile("./audios/output.mp3", response.audioContent, "binary");
 
     res.send(response.audioContent); // Send MP3 content directly to frontend
   } catch (error) {
