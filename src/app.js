@@ -51,7 +51,7 @@ const client = new textToSpeech.TextToSpeechClient({
 });
 
 app.get("/", async (req, res) => {
-  req.send("Dearmom backend");
+  res.send("Dearmom backend");
 });
 
 app.post("/synthesize", async (req, res) => {
