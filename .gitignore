@@ -5,3 +5,4 @@ pnpm-lock.yaml
 gcloud-key.json
 key.json.base64
 ./audios/*
+.vercel
